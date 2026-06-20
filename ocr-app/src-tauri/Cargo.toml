@@ -1,0 +1,47 @@
+[package]
+name = "ocr-app"
+version = "0.1.0"
+description = "Offline OCR App powered by PP-OCRv6"
+authors = ["you"]
+edition = "2021"
+
+[lib]
+name = "ocr_app_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "1", features = [] }
+
+[dependencies]
+tauri = { version = "1", features = ["protocol-asset", "dialog-open"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+ppocr-rs = { path = "../../ppocr-rs-local", features = ["fetch-models"] }
+image = "0.25"
+base64 = "0.22"
+
+# Linux: load-dynamic 避免预编译静态库的 glibc 兼容性问题
+# Windows/macOS: download-binaries 编译时下载正确版本的 ONNX Runtime
+[target.'cfg(target_os = "linux")'.dependencies]
+ort = { version = "=2.0.0-rc.9", default-features = false, features = ["load-dynamic", "ndarray"] }
+
+[target.'cfg(not(target_os = "linux"))'.dependencies]
+ort = { version = "=2.0.0-rc.9", default-features = false, features = ["download-binaries", "ndarray"] }
+
+# ppocr-rs 的 example-dynamic 也会影响 ort feature，需要按平台区分
+[target.'cfg(target_os = "linux")'.dependencies.ppocr-rs]
+path = "../../ppocr-rs-local"
+features = ["fetch-models", "example-dynamic"]
+
+[target.'cfg(not(target_os = "linux"))'.dependencies.ppocr-rs]
+path = "../../ppocr-rs-local"
+features = ["fetch-models", "test-binaries"]
+
+[features]
+default = ["custom-protocol"]
+custom-protocol = ["tauri/custom-protocol"]
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1

@@ -1,0 +1,24 @@
+services:
+  ocr-builder:
+    image: arm64v8/ubuntu:20.04
+    platform: linux/arm64
+    # 持久化容器，不用每次重建环境
+    container_name: ocr-arm64-builder
+    # 分配所有可用CPU核心
+    cpus: ${DOCKER_CPUS:-0}
+    # 增加内存限制
+    mem_limit: ${DOCKER_MEM:-8g}
+    environment:
+      - DEBIAN_FRONTEND=noninteractive
+      # Rust 镜像源
+      - RUSTUP_DIST_SERVER=${RUSTUP_DIST_SERVER:-https://rsproxy.cn}
+      - RUSTUP_UPDATE_ROOT=${RUSTUP_UPDATE_ROOT:-https://rsproxy.cn/rustup}
+      # 编译并行度（0在cargo中不合法，需设置具体核心数）
+      - CARGO_BUILD_JOBS=${CARGO_BUILD_JOBS:-16}
+    volumes:
+      - ../..:/work
+    working_dir: /work/ocr-app
+    # 交互式 bash，手动执行构建步骤
+    stdin_open: true
+    tty: true
+    command: bash

@@ -1,0 +1,33 @@
+name: Build ARM64 Linux
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'ocr-app/**'
+      - 'ppocr-rs-local/**'
+
+jobs:
+  build-arm64:
+    # Native ARM64 runner (public repos: free; private repos: needs Team plan)
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build in Ubuntu 20.04 container
+        run: |
+          docker buildx build --platform linux/arm64 -t ocr-builder -f ocr-app/Dockerfile .
+
+          docker run --rm \
+            -v ${{ github.workspace }}:/work \
+            -e CARGO_BUILD_JOBS=4 \
+            ocr-builder \
+            bash -c "cd /work/ocr-app && npm run build && cd src-tauri && cargo build --release && bash /work/ocr-app/pack-arm64.sh"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: pp-ocrv6-arm64-linux
+          path: pp-ocrv6-0.1.0-arm64.tar.gz
+          retention-days: 30

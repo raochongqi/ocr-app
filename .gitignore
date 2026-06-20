@@ -1,0 +1,26 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# Build outputs
+pp-ocrv6-0.1.0-arm64.tar.gz
+
+# Large model files in root (not used by Tauri app)
+models/PP-OCRv6_small_det_onnx/
+models/PP-OCRv6_small_rec_onnx/
+models/ppocrv6_dict.txt
+
+# Android files (not needed for current build)
+ocr-app/src-tauri/onnxruntime-android-extracted/
+ocr-app/src-tauri/onnxruntime-android.aar
+ocr-app/src-tauri/onnxruntime-android.zip
+
+# Tauri build cache
+ocr-app/src-tauri/target/

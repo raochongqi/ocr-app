@@ -1,0 +1,23 @@
+# cross-rs 配置 (可选，用于从 x86 交叉编译到 ARM64)
+# 用法: cross build --target aarch64-unknown-linux-gnu --release --manifest-path src-tauri/Cargo.toml
+#
+# 注意: Tauri v1 使用 libwebkit2gtk-4.0 (兼容 Ubuntu 20.04)
+# 推荐在 ARM64 设备上原生编译或使用 Docker QEMU
+
+[build]
+pre-build = [
+    "dpkg --add-architecture arm64",
+    "apt-get update",
+    "apt-get install -y --no-install-recommends \
+        libwebkit2gtk-4.0-dev:arm64 \
+        libgtk-3-dev:arm64 \
+        libayatana-appindicator3-dev:arm64 \
+        librsvg2-dev:arm64 \
+        libssl-dev:arm64 \
+        libsoup2.4-dev:arm64 \
+        libjavascriptcoregtk-4.0-dev:arm64 \
+        pkg-config",
+]
+
+[target.aarch64-unknown-linux-gnu]
+image = "ghcr.io/cross-rs/aarch64-unknown-linux-gnu:0.2.5"
