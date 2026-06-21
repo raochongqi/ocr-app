@@ -38,6 +38,7 @@ function App() {
   const [imagePath, setImagePath] = useState<string>("");
   const [imageSrc, setImageSrc] = useState<string>("");
   const [imageSize, setImageSize] = useState<{ w: number; h: number } | null>(null);
+  const [displaySize, setDisplaySize] = useState<{ w: number; h: number } | null>(null);
   const [modelVersion, setModelVersion] = useState<string>("Small");
   const [copiedAll, setCopiedAll] = useState(false);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
@@ -45,6 +46,7 @@ function App() {
   const [selectedBlocks, setSelectedBlocks] = useState<Set<number>>(new Set());
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const dropRef = useRef<HTMLDivElement>(null);
+  const imageAreaRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     invoke<ModelStatus>("get_model_status").then((status) => {
@@ -142,6 +144,33 @@ function App() {
     const img = e.currentTarget;
     setImageSize({ w: img.naturalWidth, h: img.naturalHeight });
   };
+
+  /** 根据容器可用空间和图片原始尺寸，计算等比缩放后的显示尺寸 */
+  const computeDisplaySize = useCallback(() => {
+    if (!imageSize || !imageAreaRef.current) return;
+    const container = imageAreaRef.current;
+    const style = getComputedStyle(container);
+    const padX = parseFloat(style.paddingLeft) + parseFloat(style.paddingRight);
+    const padY = parseFloat(style.paddingTop) + parseFloat(style.paddingBottom);
+    const maxW = container.clientWidth - padX;
+    const maxH = container.clientHeight - padY;
+    if (maxW <= 0 || maxH <= 0) return;
+
+    const scale = Math.min(maxW / imageSize.w, maxH / imageSize.h, 1);
+    setDisplaySize({
+      w: Math.round(imageSize.w * scale),
+      h: Math.round(imageSize.h * scale),
+    });
+  }, [imageSize]);
+
+  /** 监听容器尺寸变化，自动重新计算缩放 */
+  useEffect(() => {
+    if (!imageSize) return;
+    computeDisplaySize();
+    const observer = new ResizeObserver(() => computeDisplaySize());
+    if (imageAreaRef.current) observer.observe(imageAreaRef.current);
+    return () => observer.disconnect();
+  }, [imageSize, computeDisplaySize]);
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -255,16 +284,28 @@ function App() {
           <div className="panel-image">
             <div
               className="image-area"
-              ref={dropRef}
+              ref={(el) => { dropRef.current = el; imageAreaRef.current = el; }}
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}
               onClick={!imageSrc ? selectImage : undefined}
             >
               {imageSrc ? (
-                <div className="image-container">
-                  <img src={imageSrc} alt="输入图片" onLoad={onImageLoad} className="ocr-image" />
-                  {ocrResult && <canvas ref={canvasRef} className="overlay-canvas" />}
+                <div className="image-container" style={displaySize ? { width: displaySize.w, height: displaySize.h } : undefined}>
+                  <img
+                    src={imageSrc}
+                    alt="输入图片"
+                    onLoad={onImageLoad}
+                    className="ocr-image"
+                    style={displaySize ? { width: displaySize.w, height: displaySize.h } : undefined}
+                  />
+                  {ocrResult && displaySize && (
+                    <canvas
+                      ref={canvasRef}
+                      className="overlay-canvas"
+                      style={{ width: displaySize.w, height: displaySize.h }}
+                    />
+                  )}
                 </div>
               ) : (
                 <div className="drop-zone">

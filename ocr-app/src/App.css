@@ -21,9 +21,10 @@
 }
 
 .app {
-  min-height: 100vh;
+  height: 100vh;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 /* ===== Header ===== */
@@ -207,6 +208,7 @@
   flex-direction: column;
   gap: 8px;
   min-width: 0;
+  min-height: 0;
 }
 
 .panel-result {
@@ -219,14 +221,14 @@
 /* ===== Image area ===== */
 .image-area {
   flex: 1;
-  min-height: 200px;
+  min-height: 0;
   border: 2px dashed var(--border);
   border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
   background: var(--bg-card);
-  overflow: auto;
+  overflow: hidden;
   transition: border-color 0.2s;
 }
 
@@ -238,23 +240,16 @@
 .image-container {
   position: relative;
   display: inline-block;
-  max-width: 100%;
-  max-height: 100%;
 }
 
 .ocr-image {
-  max-width: 100%;
-  max-height: 100%;
   display: block;
-  object-fit: contain;
 }
 
 .overlay-canvas {
   position: absolute;
   top: 0;
   left: 0;
-  width: 100%;
-  height: 100%;
   pointer-events: none;
 }
 
@@ -450,15 +445,12 @@
   .panel-image {
     flex: 0 0 auto;
     max-height: 45vh;
+    min-height: 0;
   }
 
   .panel-result {
     flex: 1 1 auto;
     min-height: 200px;
-  }
-
-  .ocr-image {
-    max-height: 35vh;
   }
 
   .results-list {
