@@ -17,13 +17,13 @@ jobs:
 
       - name: Build in Ubuntu 20.04 container
         run: |
-          docker buildx build --platform linux/arm64 -t ocr-builder -f ocr-app/Dockerfile .
+          docker buildx build --platform linux/arm64 -t ocr-builder -f ocr-app/Dockerfile.ci .
 
           docker run --rm \
             -v ${{ github.workspace }}:/work \
             -e CARGO_BUILD_JOBS=4 \
             ocr-builder \
-            bash -c "cd /work/ocr-app && npm run build && cd src-tauri && cargo build --release && bash /work/ocr-app/pack-arm64.sh"
+            bash -c "sed -i 's/\r$//' /work/ocr-app/pack-arm64.sh && cd /work/ocr-app && npm run build && cd src-tauri && cargo build --release && bash /work/ocr-app/pack-arm64.sh"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4

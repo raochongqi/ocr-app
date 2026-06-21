@@ -1,0 +1,36 @@
+# ARM64 Linux build environment (Ubuntu 20.04 + libwebkit2gtk-4.0)
+# For GitHub Actions - uses official sources (no China mirrors)
+FROM arm64v8/ubuntu:20.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV TZ=UTC
+
+# ---- 1. apt (official ports) ----
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    pkg-config \
+    curl \
+    wget \
+    file \
+    ca-certificates \
+    libssl-dev \
+    libwebkit2gtk-4.0-dev \
+    libgtk-3-dev \
+    libayatana-appindicator3-dev \
+    librsvg2-dev \
+    libsoup2.4-dev \
+    libjavascriptcoregtk-4.0-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# ---- 2. Rust (official) ----
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable
+ENV PATH="/root/.cargo/bin:${PATH}"
+
+# ---- 3. Node.js 22 (official) ----
+ENV NODE_VER=22.16.0
+RUN curl -fsSL "https://nodejs.org/dist/v${NODE_VER}/node-v${NODE_VER}-linux-arm64.tar.xz" \
+    -o /tmp/node.tar.xz \
+    && tar -xJf /tmp/node.tar.xz -C /usr/local --strip-components=1 \
+    && rm -f /tmp/node.tar.xz
+
+WORKDIR /work/ocr-app

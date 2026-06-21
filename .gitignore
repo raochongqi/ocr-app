@@ -23,6 +23,8 @@ models/ppocrv6_dict.txt
 ocr-app/src-tauri/onnxruntime-android-extracted/
 ocr-app/src-tauri/onnxruntime-android.aar
 ocr-app/src-tauri/onnxruntime-android.zip
+ocr-app-android/
+target/
 
 # Tauri build cache
 ocr-app/src-tauri/target/
