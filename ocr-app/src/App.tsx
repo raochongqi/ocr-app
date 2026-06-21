@@ -39,7 +39,7 @@ function App() {
   const [imageSrc, setImageSrc] = useState<string>("");
   const [imageSize, setImageSize] = useState<{ w: number; h: number } | null>(null);
   const [displaySize, setDisplaySize] = useState<{ w: number; h: number } | null>(null);
-  const [modelVersion, setModelVersion] = useState<string>("Small");
+  const [modelVersion, setModelVersion] = useState<string>("Tiny");
   const [copiedAll, setCopiedAll] = useState(false);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const [copiedSelected, setCopiedSelected] = useState(false);
@@ -53,8 +53,12 @@ function App() {
       if (status.ready) {
         setModelStatus(status);
         setState("ready");
+      } else {
+        loadModels("Tiny");
       }
-    }).catch(() => {});
+    }).catch(() => {
+      loadModels("Tiny");
+    });
   }, []);
 
   useEffect(() => {
