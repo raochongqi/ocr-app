@@ -23,7 +23,7 @@ jobs:
             -v ${{ github.workspace }}:/work \
             -e CARGO_BUILD_JOBS=4 \
             ocr-builder \
-            bash -c "sed -i 's/\r$//' /work/ocr-app/pack-arm64.sh && cd /work/ocr-app && npm run build && cd src-tauri && cargo build --release && bash /work/ocr-app/pack-arm64.sh"
+            bash -c "sed -i 's/\r$//' /work/ocr-app/pack-arm64.sh && cd /work/ocr-app && npm install && npm run build && cd src-tauri && cargo build --release && bash /work/ocr-app/pack-arm64.sh"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
