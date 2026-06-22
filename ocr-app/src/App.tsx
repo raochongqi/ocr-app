@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { invoke, convertFileSrc } from "@tauri-apps/api/tauri";
 import { open } from "@tauri-apps/api/dialog";
+import { appWindow } from "@tauri-apps/api/window";
 import "./App.css";
 
 interface OcrPoint {
@@ -59,6 +60,19 @@ function App() {
     }).catch(() => {
       loadModels("Tiny");
     });
+  }, []);
+
+  // 监听 Tauri 拖放事件（桌面端）
+  useEffect(() => {
+    const unlisten = appWindow.onFileDropEvent((event) => {
+      if (event.payload.type === "drop") {
+        const paths = event.payload.paths;
+        if (paths.length > 0) {
+          setImageFromFile(paths[0]);
+        }
+      }
+    });
+    return () => { unlisten.then((fn) => fn()); };
   }, []);
 
   useEffect(() => {
