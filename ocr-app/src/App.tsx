@@ -85,22 +85,23 @@ function App() {
     canvas.width = imageSize.w;
     canvas.height = imageSize.h;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.strokeStyle = "rgba(0, 180, 255, 0.85)";
-    ctx.lineWidth = 2;
-    ctx.fillStyle = "rgba(0, 180, 255, 0.1)";
 
-    for (const block of ocrResult.blocks) {
-      if (block.box_points.length < 4) continue;
+    ocrResult.blocks.forEach((block, i) => {
+      if (block.box_points.length < 4) return;
+      const selected = selectedBlocks.has(i);
+      ctx.strokeStyle = selected ? "rgba(220, 38, 38, 0.85)" : "rgba(0, 180, 255, 0.85)";
+      ctx.lineWidth = 2;
+      ctx.fillStyle = selected ? "rgba(220, 38, 38, 0.15)" : "rgba(0, 180, 255, 0.1)";
       ctx.beginPath();
       ctx.moveTo(block.box_points[0].x, block.box_points[0].y);
-      for (let i = 1; i < block.box_points.length; i++) {
-        ctx.lineTo(block.box_points[i].x, block.box_points[i].y);
+      for (let j = 1; j < block.box_points.length; j++) {
+        ctx.lineTo(block.box_points[j].x, block.box_points[j].y);
       }
       ctx.closePath();
       ctx.fill();
       ctx.stroke();
-    }
-  }, [ocrResult, imageSize]);
+    });
+  }, [ocrResult, imageSize, selectedBlocks]);
 
   const loadModels = useCallback(async (ver?: string) => {
     setState("loading-models");
@@ -249,6 +250,44 @@ function App() {
     });
   };
 
+  /** 射线法判断点是否在多边形内 */
+  const pointInPolygon = (px: number, py: number, polygon: OcrPoint[]): boolean => {
+    let inside = false;
+    for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+      const xi = polygon[i].x, yi = polygon[i].y;
+      const xj = polygon[j].x, yj = polygon[j].y;
+      if ((yi > py) !== (yj > py) && px < ((xj - xi) * (py - yi)) / (yj - yi) + xi) {
+        inside = !inside;
+      }
+    }
+    return inside;
+  };
+
+  /** Canvas 点击：将显示坐标转为原图坐标，检测命中的框并切换选中 */
+  const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!ocrResult || !imageSize || !displaySize) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const clickY = e.clientY - rect.top;
+    // 显示坐标 → 原图坐标
+    const scaleX = imageSize.w / displaySize.w;
+    const scaleY = imageSize.h / displaySize.h;
+    const imgX = clickX * scaleX;
+    const imgY = clickY * scaleY;
+
+    // 遍历框，找到索引最小的命中框
+    for (let i = 0; i < ocrResult.blocks.length; i++) {
+      const block = ocrResult.blocks[i];
+      if (block.box_points.length < 4) continue;
+      if (pointInPolygon(imgX, imgY, block.box_points)) {
+        toggleBlock(i);
+        return;
+      }
+    }
+  };
+
   const toggleAll = () => {
     if (!ocrResult) return;
     if (selectedBlocks.size === ocrResult.blocks.length) {
@@ -322,6 +361,7 @@ function App() {
                       ref={canvasRef}
                       className="overlay-canvas"
                       style={{ width: displaySize.w, height: displaySize.h }}
+                      onClick={handleCanvasClick}
                     />
                   )}
                 </div>
