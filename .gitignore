@@ -20,16 +20,10 @@ models/PP-OCRv6_small_rec_onnx/
 models/ppocrv6_dict.txt
 
 # Android files (not needed for current build)
-ocr-app/src-tauri/onnxruntime-android-extracted/
-ocr-app/src-tauri/onnxruntime-android.aar
-ocr-app/src-tauri/onnxruntime-android.zip
 ocr-app-android/
 target/
 
 # Tauri build cache
 ocr-app/src-tauri/target/
 
-# Temporary test files
-1048576
-10485760
-5242880
+.agents/

@@ -454,7 +454,8 @@
   }
 
   .results-list {
-    max-height: 30vh;
+    flex: 1;
+    max-height: none;
   }
 }
 
