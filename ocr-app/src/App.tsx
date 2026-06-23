@@ -2,6 +2,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { invoke, convertFileSrc } from "@tauri-apps/api/tauri";
 import { open } from "@tauri-apps/api/dialog";
 import { appWindow } from "@tauri-apps/api/window";
+import { z } from "zod";
 import "./App.css";
 
 interface OcrPoint {
@@ -29,6 +30,24 @@ interface ModelStatus {
   dict_entries: number;
 }
 
+/** zod schema：校验 ocr_recognize_base64 响应体，防止后端返回异常数据 */
+const ocrPointSchema = z.object({
+  x: z.number(),
+  y: z.number(),
+});
+
+const ocrTextBlockSchema = z.object({
+  text: z.string(),
+  score: z.number(),
+  box_points: z.array(ocrPointSchema),
+});
+
+const ocrResponseSchema = z.object({
+  blocks: z.array(ocrTextBlockSchema),
+  page_angle: z.number(),
+  elapsed_ms: z.number(),
+});
+
 type AppState = "idle" | "loading-models" | "ready" | "recognizing" | "done" | "error";
 
 function App() {
@@ -48,6 +67,9 @@ function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const dropRef = useRef<HTMLDivElement>(null);
   const imageAreaRef = useRef<HTMLDivElement>(null);
+  // 用 ref 持有最新 state，避免 paste 监听器频繁重注册
+  const stateRef = useRef(state);
+  stateRef.current = state;
 
   useEffect(() => {
     invoke<ModelStatus>("get_model_status").then((status) => {
@@ -73,6 +95,35 @@ function App() {
       }
     });
     return () => { unlisten.then((fn) => fn()); };
+  }, []);
+
+  // 监听 Ctrl+V 粘贴剪贴板图片（截图 / 复制的图片）
+  useEffect(() => {
+    const handlePaste = (e: ClipboardEvent) => {
+      // OCR 或模型加载中时，不拦截粘贴
+      if (stateRef.current === "recognizing" || stateRef.current === "loading-models") return;
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      for (const item of items) {
+        if (item.type.startsWith("image/")) {
+          e.preventDefault();
+          const file = item.getAsFile();
+          if (!file) return;
+          const reader = new FileReader();
+          reader.onload = () => {
+            setImagePath("");
+            setImageSrc(reader.result as string);
+            setOcrResult(null);
+            setSelectedBlocks(new Set());
+            setState("ready");
+          };
+          reader.readAsDataURL(file);
+          return;
+        }
+      }
+    };
+    document.addEventListener("paste", handlePaste);
+    return () => document.removeEventListener("paste", handlePaste);
   }, []);
 
   useEffect(() => {
@@ -143,13 +194,19 @@ function App() {
   };
 
   const runOcr = async () => {
-    if (!imagePath) return;
+    if (!imageSrc) return;
     setState("recognizing");
     setError("");
     try {
-      const result = await invoke<OcrResponse>("ocr_recognize", {
-        imagePath: imagePath,
-      });
+      let result: OcrResponse;
+      if (imagePath) {
+        // 文件路径模式（对话框选择 / Tauri 拖放）
+        result = await invoke<OcrResponse>("ocr_recognize", { imagePath });
+      } else {
+        // 剪贴板粘贴 / HTML 拖放回退：data URL 模式，用 zod 严格校验响应
+        const raw = await invoke<unknown>("ocr_recognize_base64", { imageData: imageSrc });
+        result = ocrResponseSchema.parse(raw);
+      }
       setOcrResult(result);
       setSelectedBlocks(new Set());
       setState("done");
@@ -368,7 +425,7 @@ function App() {
               ) : (
                 <div className="drop-zone">
                   <div className="drop-icon">+</div>
-                  <p>拖放图片到此处，或点击选择</p>
+                  <p>拖放图片到此处，或点击选择（支持 Ctrl+V 粘贴）</p>
                 </div>
               )}
             </div>
