@@ -93,11 +93,11 @@ fn resolve_model_paths(app: &tauri::AppHandle, version: PpOcrVersion) -> Result<
     for bundled in &candidates {
         let det = bundled.join("det.onnx");
         let rec = bundled.join("rec.onnx");
-        let dict = bundled.join("dict.txt");
+        let dict = bundled.join("dict.bin");
         let rec_yml = bundled.join("rec_inference.yml");
 
         if det.exists() && rec.exists() {
-            // Auto-extract dict from yml if dict.txt is missing
+            // Auto-extract dict from yml if dict.bin is missing
             if !dict.exists() && rec_yml.exists() {
                 eprintln!("[ocr-app] Extracting dict from rec_inference.yml...");
                 extract_dict_from_yml(&rec_yml, &dict)?;
@@ -122,7 +122,7 @@ fn resolve_model_paths(app: &tauri::AppHandle, version: PpOcrVersion) -> Result<
     Ok(paths)
 }
 
-/// Extract character_dict from rec_inference.yml and write to dict.txt.
+/// Extract character_dict from rec_inference.yml and write to dict.bin.
 /// Uses line-by-line parsing matching ppocr-rs's private implementation.
 fn extract_dict_from_yml(yml_path: &std::path::Path, dict_path: &std::path::Path) -> Result<(), String> {
     let content = std::fs::read_to_string(yml_path)
@@ -167,7 +167,7 @@ fn extract_dict_from_yml(yml_path: &std::path::Path, dict_path: &std::path::Path
     }
 
     let mut f = std::fs::File::create(dict_path)
-        .map_err(|e| format!("Failed to create dict.txt: {}", e))?;
+        .map_err(|e| format!("Failed to create dict.bin: {}", e))?;
     use std::io::Write;
     for ch in &chars {
         writeln!(f, "{}", ch).map_err(|e| format!("Write error: {}", e))?;

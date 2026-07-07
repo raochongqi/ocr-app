@@ -11,13 +11,13 @@ cp $BINARY $DIST/pp-ocrv6
 # Copy models (tiny)
 cp /work/ocr-app/src-tauri/models/pp_ocrv6_tiny/det.onnx $DIST/models/pp_ocrv6_tiny/
 cp /work/ocr-app/src-tauri/models/pp_ocrv6_tiny/rec.onnx $DIST/models/pp_ocrv6_tiny/
-cp /work/ocr-app/src-tauri/models/pp_ocrv6_tiny/dict.txt $DIST/models/pp_ocrv6_tiny/
+cp /work/ocr-app/src-tauri/models/pp_ocrv6_tiny/dict.bin $DIST/models/pp_ocrv6_tiny/
 cp /work/ocr-app/src-tauri/models/pp_ocrv6_tiny/rec_inference.yml $DIST/models/pp_ocrv6_tiny/
 
 # Copy models (small)
 cp /work/ocr-app/src-tauri/models/pp_ocrv6_small/det.onnx $DIST/models/pp_ocrv6_small/
 cp /work/ocr-app/src-tauri/models/pp_ocrv6_small/rec.onnx $DIST/models/pp_ocrv6_small/
-cp /work/ocr-app/src-tauri/models/pp_ocrv6_small/dict.txt $DIST/models/pp_ocrv6_small/
+cp /work/ocr-app/src-tauri/models/pp_ocrv6_small/dict.bin $DIST/models/pp_ocrv6_small/
 cp /work/ocr-app/src-tauri/models/pp_ocrv6_small/rec_inference.yml $DIST/models/pp_ocrv6_small/
 
 # Download libonnxruntime.so for ARM64 Linux
