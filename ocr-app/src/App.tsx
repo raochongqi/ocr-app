@@ -2,6 +2,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { invoke, convertFileSrc } from "@tauri-apps/api/tauri";
 import { open } from "@tauri-apps/api/dialog";
 import { appWindow } from "@tauri-apps/api/window";
+import { writeText } from "@tauri-apps/api/clipboard";
 import { z } from "zod";
 import "./App.css";
 
@@ -97,33 +98,30 @@ function App() {
     return () => { unlisten.then((fn) => fn()); };
   }, []);
 
-  // 监听 Ctrl+V 粘贴剪贴板图片（截图 / 复制的图片）
+  // 监听 Ctrl+V / Cmd+V，调用原生剪贴板 API 读取图片（跨平台，兼容 Linux）
   useEffect(() => {
-    const handlePaste = (e: ClipboardEvent) => {
-      // OCR 或模型加载中时，不拦截粘贴
-      if (stateRef.current === "recognizing" || stateRef.current === "loading-models") return;
-      const items = e.clipboardData?.items;
-      if (!items) return;
-      for (const item of items) {
-        if (item.type.startsWith("image/")) {
-          e.preventDefault();
-          const file = item.getAsFile();
-          if (!file) return;
-          const reader = new FileReader();
-          reader.onload = () => {
+    const handleKeyDown = async (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === "v") {
+        // OCR 或模型加载中时，不拦截粘贴
+        if (stateRef.current === "recognizing" || stateRef.current === "loading-models") return;
+        // 同步阻止默认粘贴行为，确保由原生命令接管
+        e.preventDefault();
+        try {
+          const dataUrl = await invoke<string>("read_clipboard_image");
+          if (dataUrl) {
             setImagePath("");
-            setImageSrc(reader.result as string);
+            setImageSrc(dataUrl);
             setOcrResult(null);
             setSelectedBlocks(new Set());
             setState("ready");
-          };
-          reader.readAsDataURL(file);
-          return;
+          }
+        } catch (err) {
+          console.error("Failed to read clipboard image:", err);
         }
       }
     };
-    document.addEventListener("paste", handlePaste);
-    return () => document.removeEventListener("paste", handlePaste);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
   }, []);
 
   useEffect(() => {
@@ -284,8 +282,8 @@ function App() {
     }
   };
 
-  const copyText = (text: string, type: "single" | "all" | "selected", index?: number) => {
-    navigator.clipboard.writeText(text);
+  const copyText = async (text: string, type: "single" | "all" | "selected", index?: number) => {
+    // 先更新 UI 状态，确保无论剪贴板写入是否成功都有反馈
     if (type === "single" && index !== undefined) {
       setCopiedIndex(index);
       setTimeout(() => setCopiedIndex(null), 1500);
@@ -295,6 +293,11 @@ function App() {
     } else if (type === "selected") {
       setCopiedSelected(true);
       setTimeout(() => setCopiedSelected(false), 1500);
+    }
+    try {
+      await writeText(text);
+    } catch (err) {
+      console.error("Failed to copy text:", err);
     }
   };
 
@@ -402,7 +405,7 @@ function App() {
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}
-              onClick={!imageSrc ? selectImage : undefined}
+              //onClick={!imageSrc ? selectImage : undefined}
             >
               {imageSrc ? (
                 <div className="image-container" style={displaySize ? { width: displaySize.w, height: displaySize.h } : undefined}>
@@ -425,7 +428,7 @@ function App() {
               ) : (
                 <div className="drop-zone">
                   <div className="drop-icon">+</div>
-                  <p>拖放图片到此处，或点击选择（支持 Ctrl+V 粘贴）</p>
+                  <p>拖放图片到此处（支持 Ctrl+V 粘贴）</p>
                 </div>
               )}
             </div>
@@ -454,20 +457,24 @@ function App() {
                   <div className="results-header-right">
                     {selectedBlocks.size > 0 && (
                       <button
-                        onClick={() => copyText(
-                          ocrResult.blocks
-                            .filter((_, i) => selectedBlocks.has(i))
-                            .map((b) => b.text)
-                            .join("\n"),
-                          "selected"
-                        )}
+                        onClick={() => {
+                          copyText(
+                            ocrResult.blocks
+                              .filter((_, i) => selectedBlocks.has(i))
+                              .map((b) => b.text)
+                              .join("\n"),
+                            "selected"
+                          );
+                        }}
                         className="btn-small btn-accent"
                       >
                         {copiedSelected ? "已复制" : `复制选中 (${selectedBlocks.size})`}
                       </button>
                     )}
                     <button
-                      onClick={() => copyText(ocrResult.blocks.map((b) => b.text).join("\n"), "all")}
+                      onClick={() => {
+                        copyText(ocrResult.blocks.map((b) => b.text).join("\n"), "all");
+                      }}
                       className="btn-small"
                     >
                       {copiedAll ? "已复制" : "复制全部"}
@@ -488,7 +495,9 @@ function App() {
                       <span className="block-score">{(block.score * 100).toFixed(1)}%</span>
                       <button
                         className="btn-copy"
-                        onClick={() => copyText(block.text, "single", i)}
+                        onClick={() => {
+                          copyText(block.text, "single", i);
+                        }}
                         title="复制"
                       >
                         {copiedIndex === i ? "✓" : "⧉"}

@@ -327,6 +327,39 @@ fn ocr_recognize_base64(
     Ok(OcrResponse { blocks, page_angle: result.page_angle, elapsed_ms })
 }
 
+/// Read image data from the system clipboard and return it as a base64 PNG data URL.
+/// Returns an empty string if the clipboard does not contain an image.
+#[tauri::command]
+fn read_clipboard_image() -> Result<String, String> {
+    let mut clipboard = arboard::Clipboard::new()
+        .map_err(|e| format!("Clipboard init failed: {}", e))?;
+
+    let image = match clipboard.get_image() {
+        Ok(img) => img,
+        Err(arboard::Error::ContentNotAvailable) => return Ok(String::new()),
+        Err(e) => return Err(format!("Failed to read clipboard image: {}", e)),
+    };
+
+    if image.width == 0 || image.height == 0 || image.bytes.is_empty() {
+        return Ok(String::new());
+    }
+
+    let rgba = image::RgbaImage::from_raw(
+        image.width as u32,
+        image.height as u32,
+        image.bytes.into_owned(),
+    ).ok_or("Invalid clipboard image dimensions")?;
+
+    let mut png_bytes: Vec<u8> = Vec::new();
+    rgba.write_to(
+        &mut std::io::Cursor::new(&mut png_bytes),
+        image::ImageFormat::Png,
+    ).map_err(|e| format!("PNG encode failed: {}", e))?;
+
+    let b64 = base64::Engine::encode(&base64::engine::general_purpose::STANDARD, &png_bytes);
+    Ok(format!("data:image/png;base64,{}", b64))
+}
+
 pub fn run() {
     // Initialize ONNX Runtime dynamic library (load-dynamic mode, Linux only)
     // Windows uses download-binaries which links statically at compile time
@@ -369,6 +402,7 @@ pub fn run() {
             get_model_status,
             ocr_recognize,
             ocr_recognize_base64,
+            read_clipboard_image,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
