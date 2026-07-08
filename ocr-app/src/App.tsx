@@ -492,7 +492,7 @@ function App() {
                       />
                       <span className="block-index">{i + 1}</span>
                       <span className="block-text">{block.text}</span>
-                      <span className="block-score">{(block.score * 100).toFixed(1)}%</span>
+                      <span className="block-score" onMouseDown={(e) => e.preventDefault()}>{(block.score * 100).toFixed(1)}%</span>
                       <button
                         className="btn-copy"
                         onClick={() => {
